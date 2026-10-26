@@ -1,0 +1,93 @@
+# Airline Revenue Management Simulator — Configuration
+# All tunable parameters in one place.
+
+random_seed: 42
+
+# --- Routes ---
+routes:
+  - name: "JFK-LAX"
+    capacity: 180
+  - name: "ORD-MIA"
+    capacity: 180
+  - name: "SFO-SEA"
+    capacity: 175
+  - name: "ATL-DFW"
+    capacity: 185
+  - name: "BOS-DCA"
+    capacity: 180
+
+# --- Fare classes (ordered low → high) ---
+fare_classes:
+  - code: Q
+    fare: 120
+    description: "Deep discount"
+  - code: M
+    fare: 220
+    description: "Discount"
+  - code: B
+    fare: 380
+    description: "Full economy"
+  - code: Y
+    fare: 580
+    description: "Flexible / last-minute"
+
+# --- Booking horizon ---
+booking_horizon_days: 90   # days before departure
+
+# --- Synthetic demand parameters ---
+demand:
+  history_days: 365         # days of historical data to generate
+  holdout_days: 30          # last N days held out for forecast evaluation
+  # Mean daily demand per fare class per route (base, before seasonality).
+  # Rows = fare classes Q, M, B, Y; lower fares have higher base demand.
+  base_daily_demand:
+    Q: 3.5
+    M: 2.5
+    B: 1.5
+    Y: 0.8
+  # Weekly seasonality amplitude (fraction of base)
+  weekly_amplitude: 0.20
+  # Trend growth rate per day
+  trend_per_day: 0.001
+  # Holiday spike multiplier (applied on ~6 dates per year)
+  holiday_multiplier: 1.8
+  # Noise scale (std-dev as fraction of base demand)
+  noise_scale: 0.25
+  # Route-level demand multipliers (so routes aren't identical)
+  route_multipliers:
+    JFK-LAX: 1.0
+    ORD-MIA: 1.1
+    SFO-SEA: 0.85
+    ATL-DFW: 1.15
+    BOS-DCA: 0.9
+
+# --- Booking-time profile ---
+# Fraction of total demand that has arrived by day d (days before departure).
+# Q books early, Y books late.  We model arrival intensity with shape params.
+booking_time_profile:
+  # Shape parameter for Beta distribution CDF (alpha, beta).
+  # Higher beta → earlier booking.  Higher alpha → later booking.
+  Q: { alpha: 2.0, beta: 5.0 }
+  M: { alpha: 2.5, beta: 4.0 }
+  B: { alpha: 3.5, beta: 3.0 }
+  Y: { alpha: 5.0, beta: 2.0 }
+
+# --- Forecasting ---
+forecasting:
+  arima_order: [1, 1, 1]
+  arima_seasonal_order: [1, 1, 1, 7]
+  prophet_yearly_seasonality: false
+  prophet_weekly_seasonality: true
+
+# --- Simulation ---
+simulation:
+  num_runs: 500
+  policies:
+    - FCFS
+    - EMSR-b
+    - LP
+  confidence_level: 0.95
+
+# --- Output ---
+output:
+  results_dir: "results"
